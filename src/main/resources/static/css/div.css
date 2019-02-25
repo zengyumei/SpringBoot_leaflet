@@ -1,0 +1,25 @@
+#myposition
+{
+    float: right;
+    position: absolute;
+    bottom: 10px;
+    width: 15%;
+    z-index: 2000;
+    color: aquamarine;
+}
+
+
+#div1
+{
+	float: left;
+	position: absolute;
+	background-color: #4f4a4f;
+	color: white;
+	width: 100%;
+	height: 100%;
+}
+
+button
+{
+	margin-left: 15px;
+}

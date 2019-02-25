@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+	<link rel="stylesheet" href="/css/ol.css" type="text/css">
+	<link rel="stylesheet" href="/css/div.css" type="text/css">
+    <style>
+        .map {
+            height: 400px;
+            width: 100%;
+        }
+    </style>
+    <script src="/js/ol.js"></script>
+    <script src="/js/jquery-3.3.1.js"></script>
+    <style type="text/css">
+        .mosuePosition
+        {
+            color: black;
+            font-size: 15px;
+            font-family: '微软雅黑';
+            align: center;
+        }
+    </style>
+    <title>test</title>
+</head>
+<body>
+
+<div id="div1" style="width: 15%; height: 100%; float: left">
+    <input type="checkbox" id="boxid" onclick="choall();"/>图层<br/>
+	<ul>
+		<input type="checkbox" name="layer" id="tilemap" onclick="choal01();"/>瓦片<br/>
+		<ul>
+			<input type="checkbox" name="sublayer" id="WorldMap" onclick="choal01World();"/>WorldMap<br/>
+			<input type="checkbox" name="sublayer" id="Thailand" onclick="choal01Thai();"/>Thailand<br/>
+			<input type="checkbox" name="sublayer" id="LandsatImage" onclick="choal01Landsat();"/>Landsat<br/>
+		</ul>
+		<input type="checkbox" name="layer" id="vectorLayer" onclick="choal03();"/>点对象<br/>
+        <input type="checkbox" name="layer" id="trajectory" onclick="choal02();"/>轨迹<br/>
+	</ul>
+	<!--  
+	<label>查询框 &nbsp;</label>
+    <select id="type">
+        <option value="Square">Square</option>
+        <option value="Box">Box</option>
+        <option value="None">None</option>
+    </select>
+    -->
+    <form id="FormTag" class="form-horizontal" enctype="multipart/form-data">
+    	zoom: <input type="text" id="zoom" style="width:120px"></br>
+    	minX : <input type="text" id="minX" style="width:120px"></br>
+    	minY : <input type="text" id="minY" style="width:120px"></br>
+    	maxX: <input type="text" id="maxX" style="width:120px"></br>
+    	maxY: <input type="text" id="maxY" style="width:120px"></br>
+    </form>
+    <button id="btn" class="btn btn-primary" type="button" onclick="chaxun()">查询</button>
+    <button id="btnrefresh">取消</button>
+    <button id="btn_min" onmousedown="min_center()">转到左下角</button>
+    <button id="btn_max" onmousedown="max_center()">转到右上角</button>
+</div>	
+<div class="ol-full-screen">
+    <div id="map" style="width:85%;float:right" >
+    	<div id="myposition"></div>
+    	<!-- <div><span>当前绘制的坐标：</span><span id='points'></span></div>  -->
+    	<div><span>当前要素ID为：</span><span id='info'>&nbsp;</span></div>
+    </div> 
+</div>
+
+<script type="text/javascript">
+
+	var styles = {
+		'Point': new ol.style.Style({
+			  radius: 2,
+			  fill: new ol.style.Fill({
+				  color: 'rgba(255, 255, 51, 0.5)'
+			  })
+		}),
+			
+		'LineString': new ol.style.Style({
+			stroke: new ol.style.Stroke({
+				color: 'rgba(178, 34, 34, 0.8)',
+				width: 1
+			})
+		}),
+		
+		'MultiLineString': new ol.style.Style({
+			  stroke: new ol.style.Stroke({
+				color: '#003',
+				width: 1
+			  })
+		}),
+			
+		'Polygon': new ol.style.Style({
+			  stroke: new ol.style.Stroke({
+				color: 'rgba(0, 0, 0, 1)',
+				width: 1
+			  }),
+			  fill: new ol.style.Fill({
+				color:  'rgba(153, 206, 201, 0)'
+			  })
+		}),
+			
+		'MultiPolygon': new ol.style.Style({
+			  stroke: new ol.style.Stroke({
+				color: '#E5E3DF',
+				width: 0.5
+			  }),
+			  fill: new ol.style.Fill({
+				color: 'rgba(153, 206, 201, 0.3)'
+			  })
+		})
+	};
+	
+	var styleFunction = function(feature) {
+		//styles.getText().setText(feature.get('objectId'));
+		return styles[feature.getGeometry().getType()];
+	};
+	
+	var highlightStyle = new ol.style.Style({
+		stroke: new ol.style.Stroke({
+			color: 'rgba(255,255,0,0.8)',
+			width: 2
+		}),
+		fill: new ol.style.Fill({
+			color: 'rgba(255,255,0,0.6)'
+		}),
+		text: new ol.style.Text({
+          	font: '12px Calibri,sans-serif',
+          	fill: new ol.style.Fill({
+            	color: '#ff0'
+        	}),
+	       	stroke: new ol.style.Stroke({
+	             color: '#ff0',
+	             width: 3
+	        })
+		})
+	});
+	
+	var choall1=document.getElementsByName("layer");
+	var choall2=document.getElementById("boxid");
+	var choall3=document.getElementsByName("sublayer");
+	
+	function choall() {
+	    for(var i=0;i<choall1.length;i++){
+	        if(choall2.checked==true){
+			choall1[i].checked=true;
+			choall3[i].checked=true;
+			}
+	
+	        else{
+	            choall1[i].checked=false;
+	            choall3[i].checked=false;
+				}
+	        
+	    }
+
+	    
+	    if(choall2.checked==true) {
+	        view.animate({
+	            center:[0,0],
+	            zoom:2
+	        });
+	        map.addLayer(tilemap);
+	        map.addLayer(trajectory);
+	        map.addLayer(vectorLayer);
+	    }
+	    else
+	    {
+	    	map.removeLayer(tilemap);
+	    	map.removeLayer(trajectory);
+	        map.removeLayer(vectorLayer);
+	    }
+	    
+	    
+	}
+	
+	function choal01() {
+	    var choal01_1=document.getElementById("tilemap");
+	    for(var i=0;i<choall3.length;i++){
+	    	if(choal01_1.checked==true){
+	        	choall3[i].checked=true;
+	        }
+	        else{
+	        	choall3[i].checked=false;
+	        }
+	    }
+	    if(choal01_1.checked==true) {
+	        view.animate({
+	            center:[100,16],
+	            zoom:5
+	        });
+	        map.addLayer(WorldMap);
+	        map.addLayer(LandsatImage);
+	        map.addLayer(Thailand);
+	    }
+	    else
+	    {
+	    	map.removeLayer(WorldMap);
+	    	map.removeLayer(LandsatImage);
+	    	map.removeLayer(Thailand);
+	    }
+	}
+	
+	function choal01World() {
+	    var choal01_1=document.getElementById("WorldMap");
+	    if(choal01_1.checked==true){
+	        view.animate({zoom: 2}, {center:center});
+	        map.addLayer(WorldMap);
+	    }else
+	    {
+	        map.removeLayer(WorldMap);
+	    }
+	}
+	
+	function choal01Thai() {
+	    var choal01_1=document.getElementById("Thailand");
+	    if(choal01_1.checked==true){
+	        view.animate({zoom: 7}, {center:center_Thailand});
+	        map.addLayer(Thailand);
+	    }else
+	    {
+	        map.removeLayer(Thailand);
+	    }
+	}
+	
+	function choal01Landsat() {
+	    var choal01_1=document.getElementById("LandsatImage");
+	    if(choal01_1.checked==true){
+	        view.animate({zoom: 5}, {center:center_Landsat});
+	        map.addLayer(LandsatImage);
+	    }else
+	    {
+	        map.removeLayer(LandsatImage);
+	    }
+	}
+	
+	function choal02() {
+	    var choal01_1=document.getElementById("trajectory");
+	    if(choal01_1.checked==true){
+	        view.animate({zoom: 5}, {center:guiji});
+	        //map.addLayer(QueryLayer);
+	        map.addLayer(trajectory);
+	    }else
+	    {
+	    	//map.removeLayer(QueryLayer);
+	    	map.removeLayer(trajectory);
+	    }
+	}
+	function choal03() {
+	    var choal01_1=document.getElementById("vectorLayer");
+	    if(choal01_1.checked==true){
+	        view.animate({zoom: 4}, {center:guiji});
+	        map.addLayer(vectorLayer); 
+	    }else
+	    {
+	        map.removeLayer(vectorLayer); 
+	    }
+	}
+	
+	function chaxun() {
+
+        var minX=parseFloat(document.getElementById("minX").value);
+        var minY=parseFloat(document.getElementById("minY").value);
+        var maxX=parseFloat(document.getElementById("maxX").value);
+        var maxY=parseFloat(document.getElementById("maxY").value);
+        var centerX=(minX+maxX)/2;
+        var centerY=(minY+maxY)/2;
+
+        var  center = ol.proj.transform([centerX, centerY], 'EPSG:4326', 'EPSG:3857');
+        	minCenter= ol.proj.transform([minX, minY], 'EPSG:4326', 'EPSG:3857');
+        	maxCenter=ol.proj.transform([maxX, maxY], 'EPSG:4326', 'EPSG:3857');
+        	view.animate({
+            	center:center,
+            	zoom:document.getElementById("zoom").value
+        	});
+        map.addLayer(chaxunLayer);
+    }
+	
+	function min_center(){
+        view.animate({
+            center: minCenter,
+            duration: 2000
+        });
+    }
+    function max_center(){
+        view.animate({
+            center: maxCenter,
+            duration: 2000
+        });
+    }
+
+	// 地图设置中心
+	var minCenter,maxCenter;
+	var center = ol.proj.transform([0, 0], 'EPSG:4326', 'EPSG:3857');
+	var center_Thailand = ol.proj.transform([99, 14], 'EPSG:4326', 'EPSG:3857');
+	var center_Landsat = ol.proj.transform([100, 16], 'EPSG:4326', 'EPSG:3857');
+	var guiji= ol.proj.transform([-68,-30], 'EPSG:4326', 'EPSG:3857');
+    var view= new ol.View({
+        center:center,
+        zoom:2
+    })
+
+    var mousePositionControl = new ol.control.MousePosition({
+        className:'mosuePosition',
+        coordinateFormat:ol.coordinate.createStringXY(2),
+        projection:'EPSG:4326',
+        target:document.getElementById('myposition')
+    });
+    
+    //创建地图
+    var map = new ol.Map({
+        //loadTilesWhileAnimating: true,
+        view:view,
+        target: 'map'
+    });
+    
+    //WorldMap图层
+    var WorldMap = new ol.layer.Tile({
+        title: "WorldMap",
+        source: new ol.source.XYZ({
+            url: 'http://localhost:8080/WMTS/WorldMap/{z}/{x}/{y}.png'
+        })
+
+    });
+    
+  //Thailand图层
+    var Thailand = new ol.layer.Tile({
+        title: "Thailand",
+        source: new ol.source.XYZ({
+            url: 'http://localhost:8080/WMTS/Thailand/{z}/{x}/{y}.png'
+        })
+    });
+  
+  //LandsatImage图层
+    var LandsatImage = new ol.layer.Tile({
+        title: "LandsatImage",
+        source: new ol.source.XYZ({
+            url: 'http://localhost:8080/WMTS/Landsat/{z}/{x}/{y}.png'
+        })
+    });
+    
+    //轨迹图层
+    var trajectory = new ol.layer.Vector({
+    	source: new ol.source.Vector({
+    		projection:'EPSG:4326',
+            url: './STQueryResults.json',
+            format: new ol.format.GeoJSON()
+    	}),
+    	style: styleFunction
+    });
+    
+    //查询框
+  	var QueryLayer = new ol.layer.Vector({
+        source: new ol.source.Vector({
+            projection:'EPSG:4326',
+            url: './query.json',
+            format: new ol.format.GeoJSON()
+        }),
+        style: styleFunction
+    });
+    //点图层
+    var vectorLayer = new ol.layer.Vector({
+        source: new ol.source.Vector({
+            projection:'EPSG:4326',
+            url: './gdelt_1.json',
+            format: new ol.format.GeoJSON()
+        }),
+        style: styleFunction
+    });
+	
+    var chaxunLayer = new ol.layer.Tile({
+        title: "chaxun",
+    	source: new ol.source.XYZ({
+            // 设置本地离线瓦片所在路径
+            url: '../chaxun/{z}_{y}_{x}.png'
+        })
+    });
+    
+	map.addControl(mousePositionControl);
+	
+	var typeSelect = document.getElementById('type');
+	//定义一个用来接收绘制对象的对象，方便以后对绘制对象进行添加、移除等操作
+    var draw;
+    var source = new ol.source.Vector({ wrapX: false });
+    //实例化矢量数据图层
+    var vector = new ol.layer.Vector({
+        //数据源
+        source: source,
+        //样式
+        style: new ol.style.Style({
+            //样式填充
+            fill: new ol.style.Fill({
+                //填充颜色
+                color: 'rgba(37, 241, 239, 0.2)'
+            }),
+            //笔触
+            stroke: new ol.style.Stroke({
+                //笔触颜色
+                color: '#264df6',
+                //笔触宽度
+                width:2
+            }),
+            //图形样式，主要适用于点样式
+            image: new ol.style.Circle({
+                //半径大小
+                radius: 7,
+                //填充
+                fill: new ol.style.Fill({
+                    //填充颜色
+                    color: '#e81818'
+                })
+            })
+        })
+    });
+
+    //将矢量图层加载到map中
+    map.addLayer(vector);
+/*
+    function addInteraction() {
+        var value = typeSelect.value;
+        if (value !== 'None') {
+            var geometryFunction;
+            if (value === 'Square') {
+                value = 'Circle';
+                geometryFunction = ol.interaction.Draw.createRegularPolygon(4);
+            } else if (value === 'Box') {
+                value = 'Circle';
+                geometryFunction = ol.interaction.Draw.createBox();
+            }
+            draw = new ol.interaction.Draw({
+                source: source,
+                projection:'EPSG:4326',
+                type: value,
+                geometryFunction: geometryFunction
+            });
+            map.addInteraction(draw);
+            draw.on('drawend',function (e) {
+                //document.getElementById('points').innerHTML =e.feature.getGeometry().getCoordinates();
+                var coord = e.feature.getGeometry().getCoordinates();
+                coord = ol.proj.transform(coord, 'EPSG:3857', 'EPSG:4326');
+                var lon = coord[0];
+                var lat = coord[1];
+                document.getElementById('points').innerHTML = lon
+
+            })
+        }
+    }
+    
+  //当绘制类型下拉列表框的选项发生改变时执行
+    typeSelect.onchange = function (e) {
+        //从map中移除交互绘图对象
+        //如果不移除，则会在下拉列表框选项发生改变时再次进行绘制时，保留上一次的draw对象
+        map.removeInteraction(draw);
+        //执行添加绘图交互的函数
+        addInteraction();
+    };
+    //添加绘图交互的函数
+    //此处是为保证刷新页面后，仍然能够根据下拉列表框框的选项进行图形绘制
+    addInteraction();
+*/    
+    var featureOverlay = new ol.layer.Vector({
+        source: new ol.source.Vector(),
+        map: map,
+        //element: document.getElementById('info'),
+        autoPan: true,
+        style: function(feature) {
+          highlightStyle.getText().setText(feature.get('id'));
+          return highlightStyle;
+        }
+      });
+	
+    var highlight;
+    var displayFeatureInfo = function(evt) {
+      var pixel = map.getEventPixel(evt.originalEvent);
+      var feature = map.forEachFeatureAtPixel(pixel, function(feature) {
+        return feature;
+      });
+
+      var info = document.getElementById('info');
+      
+      if (feature) {
+        info.innerHTML = feature.getId();
+        //featureOverlay.setPosition(evt.coordinate)
+      } else {
+        info.innerHTML = '&nbsp;';
+        //featureOverlay.setPostion(undefined)
+      }
+
+      if (feature !== highlight) {
+        if (highlight) {
+          featureOverlay.getSource().removeFeature(highlight);
+        }
+        if (feature) {
+          featureOverlay.getSource().addFeature(feature);
+        }
+        highlight = feature;
+      }
+
+    };
+	
+    //map绑定鼠标移动事件，查询
+    map.on('pointermove', function(evt) {
+        if (evt.dragging) {
+          return;
+        }
+        //var pixel = map.getEventPixel(evt.originalEvent);
+        displayFeatureInfo(evt);
+      });
+
+      map.on('click', function(evt) {
+        displayFeatureInfo(evt.pixel);
+      });
+</script>
+</body>
+</html>
